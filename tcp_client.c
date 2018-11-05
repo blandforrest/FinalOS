@@ -16,9 +16,9 @@
 
 
 void delay();
-void run_client(const char * ip_addr);
+void *run_client(void * in_arg);
 void create_threads(const char * ip_addr);
-
+void delete_thread(pthread_t threadArray[3]);
 
 int main(int argc, char **argv) {
 	if(argc != 2) {
@@ -39,8 +39,9 @@ void create_threads(const char * ip_addr){
 		pthread_attr_init(&attr);
 
 		//Creating three writer threads
-		for(int i = 0; i < 3; i++){
-			if (pthread_create(&threadArray[i], NULL, run_client, (void *)(const char *)ip_addr) != 0) {
+		int i;
+		for(i = 0; i < 3; i++){
+			if (pthread_create(&threadArray[i], NULL, run_client, (void *)ip_addr) != 0) {
 				perror("Unable to create thread to handle new connection");
 				exit(EXIT_FAILURE);
 			}
@@ -49,7 +50,8 @@ void create_threads(const char * ip_addr){
 }
 
 void delete_thread(pthread_t threadArray[3]){
-	for(int i = 0; i < 3; i++){
+	int i;
+	for(i = 0; i < 3; i++){
 		pthread_join(threadArray[i],NULL);
 	}
 }
@@ -68,13 +70,14 @@ void delay(int number_of_seconds){
 
 
 
-void run_client(const char * ip_addr){
+void *run_client(void * in_arg){
+	const char * ip_addr  = (const char *)in_arg;
 	char received[MAX], to_send[MAX], username[MAX];
 	int net_socket, conn_stat, valread;
 	struct sockaddr_in server_address;
-	socklen_t  address_size;
+	socklen_t address_size;
 
-	FILE * fp = fopen("mydata.txt", r);
+	FILE * fp = fopen("mydata.txt", "r");
 
 	if((net_socket = socket(AF_INET, SOCK_STREAM, 0)) == -1){
 		perror("Socket Failed");
@@ -94,9 +97,9 @@ void run_client(const char * ip_addr){
 	}
 
 
-	// Shared Buffer needs to be created
+	// TODO - Shared Buffer needs to be created
 	memset(to_send, 0, sizeof(to_send));
-	fgets(shared_buffer, MAX, fp);
+	// fgets(shared_buffer, MAX, fp);
 
 
 	//Sending message to server
