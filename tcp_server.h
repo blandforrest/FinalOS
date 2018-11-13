@@ -10,7 +10,7 @@
 #include <sys/shm.h>
 
 #define SHMKEY ((key_t) 6164)
-#define MAX 1000
+#define MAX 15
 #define PORT_NUM 2008
 
 //Shared Memory
