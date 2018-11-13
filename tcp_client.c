@@ -2,14 +2,13 @@
 
 int main(int argc, char **argv) {
     
-    if(argc != 3) {
+    if(argc != 2) {
         printf("Usage: /{filename} {server_ip}\n");
         return -1;
     }
-    char * ip_addr = argv[2];
+    char * ip_addr = argv[1];
     
 	//Global FP
-	fp = fopen("input.txt", "r");
 	
 	create_threads(ip_addr);
 
@@ -42,7 +41,7 @@ void create_threads(const char * ip_addr){
     delete_thread(threadArray);
 }
 
-void delete_thread(pthread_t threadArray[3]){
+void delete_thread(pthread_t threadArray[3]) {
     int i;
     for(i = 0; i < 3; i++){
         pthread_join(threadArray[i],NULL);
@@ -76,17 +75,18 @@ void *run_client(void *arguments){
 	struct arg_struct *args = arguments;
 	const char *ip_addr = args->arg1;
 
-	printf("%d\n", args->arg2); 
+	// printf("%d\n", args->arg2); 
 
-	//Creating the writer message - "Writer thread#" - To be sent to server
+    //Creating the writer message - "Writer thread#" - To be sent to server
   	char init_mssg[100] = "Writer #";	
 	char thread_ID[20];
 	sprintf(thread_ID, "%d", args->arg2);
 	strcat(init_mssg, thread_ID);
 	strcat(init_mssg, "\n");
+
 	
-	printf("%s\n", init_mssg);
-    if((net_socket = socket(AF_INET, SOCK_STREAM, 0)) == -1){
+	// printf("%s\n", init_mssg);
+    if((net_socket = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
         perror("Socket Failed");
         exit(EXIT_FAILURE);
     }
@@ -103,37 +103,48 @@ void *run_client(void *arguments){
         exit(EXIT_FAILURE);
     }
     
-    
-    if(fp == NULL){
+    FILE *fp = fopen("input.txt", "r");
+
+    if(fp == NULL) {
 		printf("File Open Error\n");
         exit(EXIT_FAILURE);
     }
 	
     
 	//Using lock to let only one message go to server at a time 
-    pthread_mutex_lock(&message_lock);
-    if(send(net_socket, init_mssg, strlen(init_mssg), 0) < 0) {
-        printf("Error: send() failed\n");
-        exit(EXIT_FAILURE);
-    }
-    pthread_mutex_unlock(&message_lock);
+    // pthread_mutex_lock(&message_lock);strlen
+    // if(send(net_socket, init_mssg, strlen(init_mssg), 0) < 0) {
+    //     printf("Error: send() failed\n");
+    //     exit(EXIT_FAILURE);
+    // }
+    // pthread_mutex_unlock(&message_lock);
 	
 	
 	//Reading from file and sending to server
-    while(fgets(word,15,fp) != NULL){
-		if(send(net_socket, word, strlen(init_mssg), 0) < 0) {
-			printf("Error: send() failed\n");
-			exit(EXIT_FAILURE);
-		}
-	}
-	
+    fgets(word,15,fp);
+	strcat(word, thread_ID);
+	// strcat(word, "\n");
+
+    // Send message
+    if(send(net_socket, word, sizeof(word), 0) < 0) {
+        perror("send");
+        exit(EXIT_FAILURE);
+    }
 	
     // Receive reply and terminate
     if(recv(net_socket, received, sizeof(received), 0) < 0) {
-        printf("Error: recv() failed\n");
+        perror("recv");
         exit(EXIT_FAILURE);
     }
-    printf("Server: %s\n", received);
+    printf("%s\n", received);
+
+    if (close(net_socket) < 0) {
+        perror("close");
+        exit(EXIT_FAILURE);
+    }    
+
+    fclose(fp);
+    pthread_exit(NULL);
     
 }
            

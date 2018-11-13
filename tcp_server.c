@@ -19,11 +19,15 @@ int main(){
 	
     create_server();
  
+    // detach shared memory
     shmctl(shmid, IPC_RMID, NULL);
     if(shmdt(shared_mem_ptr) == -1){
 		perror("shmdt");
 		exit(-1);
     }
+
+    // remove shared memory
+    shmctl(shmid, IPC_RMID, NULL);
 
 	return 0;
 }
@@ -40,32 +44,32 @@ void create_server(){
     int addrlen = sizeof(address);
     pthread_t thread_id;
     
-    
     // Creating socket file descriptor
-    //Socket is using IPv4 and TCP. Checks if NULL
-    if ((server_fd = socket(PF_INET, SOCK_STREAM, 0)) == -1){
+    // Socket is using IPv4 and TCP. Checks if NULL
+    if ((server_fd = socket(PF_INET, SOCK_STREAM, 0)) == -1) {
         perror("socket failed");
         exit(EXIT_FAILURE);
     }
     
-    //Address is a struct of sockaddr_in and uses IPv4 and the localhost for IP
+    // Address is a struct of sockaddr_in and uses IPv4 and the localhost for IP
     address.sin_family = AF_INET;
     address.sin_port = htons(PORT_NUM);
     address.sin_addr.s_addr = htonl(INADDR_ANY);
     
     // Forcefully attaching socket to the port PORT_NUM
-    if (bind(server_fd, (struct sockaddr *)&address, sizeof(address))<0){
+    if (bind(server_fd, (struct sockaddr *)&address, sizeof(address))<0) {
         perror("bind failed");
         exit(EXIT_FAILURE);
     }
-    printf("Listening...\n");
-    if (listen(server_fd, 3) < 0){
+
+    printf("Server listening on port %d\n", PORT_NUM);
+    if (listen(server_fd, 3) < 0) {
         perror("listen");
         exit(EXIT_FAILURE);
     }
     
-    int remaining_connections = 3; // TODO: change while condition to check shared memory for notification to terminate?
-    while (remaining_connections >= 0) {
+    int remaining_connections = 3;
+    while (remaining_connections > 0) {
         addr_size = sizeof(server_storage);
         if ((new_socket = accept(server_fd, (struct sockaddr *) &server_storage, &addr_size)) < 0){
             perror("accept");
@@ -79,6 +83,14 @@ void create_server(){
         }
         remaining_connections--;
     }
+    
+    // nned to wait for threads to finish. use pthread_join
+    sleep(10); // temp solution
+
+    if (close(server_fd) < 0) {
+        perror("close");
+        exit(EXIT_FAILURE);
+    }
 }
 
 
@@ -86,23 +98,34 @@ void create_server(){
 void *messager(void *in_arg){
     
     int new_socket = (intptr_t) in_arg;
-    char buffer[MAX] = {0};
+    char buffer[MAX];
     char *message = "testing, testing, 1, 2, 3..."; // Test response
     
+    if (recv(new_socket, buffer, MAX,0) <= 0)
+    { 
+        perror("recv");
+        exit(EXIT_FAILURE);
+
+    }
+
 	pthread_mutex_lock(&lock);
-    recv(new_socket, buffer, 20,0);
-    printf("%s", buffer);
-	memset(buffer, 0, sizeof(buffer));
-    pthread_mutex_unlock(&lock);
+    // printf("%s", buffer);
+    // memset(shared_mem_ptr->shared_buffer, '\0', sizeof(shared_mem_ptr->shared_buffer));
+
+    strcpy(shared_mem_ptr->shared_buffer, buffer);
+    // shared_mem_ptr->shared_buffer = buffer;
+
+    printf("%s\n", shared_mem_ptr->shared_buffer);
+	// memset(buffer, 0, sizeof(buffer));
 
 
-	char str[MAX];
+	// char str[MAX];
 	
-	while(1){
-	recv(new_socket, str, 15,0);
-    printf("%s", str);
-	memset(str, 0, sizeof(str));
-	}
+	// while(1){
+	// recv(new_socket, str, 15,0);
+    // printf("%s", str);
+	// memset(str, 0, sizeof(str));
+	// }
 	/*int i = 0;
     while (buffer[i] != '\0')
     {
@@ -115,8 +138,8 @@ void *messager(void *in_arg){
     sleep(2);
     
     //Send message once reading is complete
-    //send(new_socket, str, strlen(str), 0);   
+    send(new_socket, shared_mem_ptr->shared_buffer, sizeof(shared_mem_ptr->shared_buffer), 0);   
+    pthread_mutex_unlock(&lock);
  
-    close(new_socket); 
     pthread_exit(NULL);
 }

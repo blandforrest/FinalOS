@@ -8,8 +8,9 @@
 #include<arpa/inet.h>
 #include <errno.h>
 #include <pthread.h>
+#include <unistd.h>
 
-#define MAX  1000
+#define MAX 15
 #define PORT_NUM 2008
 
 //Argument struct for pthread_create
