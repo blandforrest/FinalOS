@@ -1,35 +1,31 @@
-//**************//
-//Curent Functionality
-//
-//Hosts communication between client and server
-//One message at a time communication(bad)
-//
+#include "tcp_server.h"
 
-
-#include <unistd.h>
-#include <stdio.h>
-#include <sys/socket.h>
-#include <stdlib.h>
-#include <netinet/in.h>
-#include <string.h>
-#include <arpa/inet.h>
-#include <pthread.h>
-#include <sys/ipc.h>
-#include <sys/shm.h>
-
-
-#define MAX 1000
-#define PORT_NUM 2008
-
-
-void create_server();
-void *messager(void *in_arg);
 
 
 
 int main(){
+	char *shmadd = (char *) 0;
+	int shmid;
+	//Creating shared memory segment
+    if((shmid = shmget(SHMKEY, sizeof(int), IPC_CREAT | 0666)) < 0){
+        perror("shmget");
+        exit(1);
+    }
+    //Attaching total to shared memory
+    if((shared_mem_ptr = (shared_memory *) shmat(shmid, shmadd, 0)) == (shared_memory *) -1){
+        perror("shmat");
+        exit(0);
+    }
+	
     create_server();
-    return 0;
+ 
+    shmctl(shmid, IPC_RMID, NULL);
+    if(shmdt(shared_mem_ptr) == -1){
+		perror("shmdt");
+		exit(-1);
+    }
+
+	return 0;
 }
 
 
@@ -69,7 +65,7 @@ void create_server(){
     }
     
     int remaining_connections = 3; // TODO: change while condition to check shared memory for notification to terminate?
-    while (remaining_connections > 0)  {
+    while (remaining_connections >= 0) {
         addr_size = sizeof(server_storage);
         if ((new_socket = accept(server_fd, (struct sockaddr *) &server_storage, &addr_size)) < 0){
             perror("accept");
@@ -92,50 +88,35 @@ void *messager(void *in_arg){
     int new_socket = (intptr_t) in_arg;
     char buffer[MAX] = {0};
     char *message = "testing, testing, 1, 2, 3..."; // Test response
-    char hello[] =
-    "\n   *****************************\n\
-    *                           *\n\
-    *       Welcome to the      *\n\
-    *           server!         *\n\
-    *                           *\n\
-    *                           *\n\
-    *****************************\n\n\n\n\n";
-    //create shared memory str
     
-    key_t key = ftok("shmfile",65);
-    int shmid = shmget(key, 1024, 0666|IPC_CREAT);
-    char *str = (char*) shmat(shmid,(void*)0,0);
-    
-    
-    // Send server greeting message
-   // send(new_socket, hello, strlen(hello),0);
-    
-    // Receive writer message
-	
-
-    recv(new_socket, buffer, 1024,0);
+	pthread_mutex_lock(&lock);
+    recv(new_socket, buffer, 20,0);
     printf("%s", buffer);
-	recv(new_socket,buffer, 1024,0);
-	printf("%s",buffer);
+	memset(buffer, 0, sizeof(buffer));
+    pthread_mutex_unlock(&lock);
 
 
-	int i = 0;
+	char str[MAX];
+	
+	while(1){
+	recv(new_socket, str, 15,0);
+    printf("%s", str);
+	memset(str, 0, sizeof(str));
+	}
+	/*int i = 0;
     while (buffer[i] != '\0')
     {
         str[i] = buffer[i];
 	    buffer[i]; 
    		i+=1;
     }
-    printf("%s", str);
+    printf("%s", str);*/
     
     sleep(2);
     
-    // Send whatever is in shared memory
-    send(new_socket, str, strlen(str), 0);
-    
-    shmdt(str);
-    shmctl(shmid,IPC_RMID,NULL);
-    
+    //Send message once reading is complete
+    //send(new_socket, str, strlen(str), 0);   
+ 
     close(new_socket); 
     pthread_exit(NULL);
 }

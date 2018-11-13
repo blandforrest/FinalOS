@@ -1,32 +1,4 @@
-#include<stdio.h>
-#include<stdlib.h>
-#include<sys/types.h>
-#include<sys/socket.h>
-#include<netinet/in.h>
-#include<time.h>
-#include<string.h>
-#include<arpa/inet.h>
-#include <errno.h>
-#include <pthread.h>
-
-#define MAX  1000
-#define PORT_NUM 2008
-
-//Argument struct for pthread_create
-struct arg_struct{
-	const char *arg1;
-	char   *arg2;
-};
-
-FILE *fp;
-
-void delay();
-void *run_client(void * arguments);
-void create_threads(const char * ip_addr);
-void delete_thread(pthread_t threadArray[3]);
-
-
-
+#include "tcp_client.h"
 
 int main(int argc, char **argv) {
     
@@ -40,17 +12,16 @@ int main(int argc, char **argv) {
 	fp = fopen("input.txt", "r");
 	
 	create_threads(ip_addr);
-    
 
 	return 0;
 }
 
 void create_threads(const char * ip_addr){
-	char * thread_ID = "1";
 	
-	struct arg_struct arguments;
-	arguments.arg1 = ip_addr;
-	arguments.arg2 = thread_ID;
+	struct arg_struct arguments[3];
+		arguments[0].arg2 = 1;
+		arguments[1].arg2 = 2;
+		arguments[2].arg2 = 3;
 
 	//Initializing threads
     pthread_t threadArray[3];
@@ -60,11 +31,13 @@ void create_threads(const char * ip_addr){
     //Creating three writer threads
     int i;
     for(i = 0; i < 3; i++){
-        if (pthread_create(&threadArray[i], NULL, run_client,(void *) &arguments) != 0){
+		
+	arguments[i].arg1 = ip_addr;
+		
+        if (pthread_create(&threadArray[i], NULL, run_client,(void *) &arguments[i]) != 0){
             perror("Unable to create thread to handle new connection");
             exit(EXIT_FAILURE);
         }
-    	arguments.arg2++;
 	}
     delete_thread(threadArray);
 }
@@ -98,15 +71,21 @@ void *run_client(void *arguments){
     struct sockaddr_in server_address;
     socklen_t  address_size;
     char word[15];
-  	char init_mssg[20] = "Writer #";
 
+	
 	struct arg_struct *args = arguments;
- 
 	const char *ip_addr = args->arg1;
-	char * thread_ID = args->arg2;
 
-	strcat(init_mssg, thread_ID); 
+	printf("%d\n", args->arg2); 
 
+	//Creating the writer message - "Writer thread#" - To be sent to server
+  	char init_mssg[100] = "Writer #";	
+	char thread_ID[20];
+	sprintf(thread_ID, "%d", args->arg2);
+	strcat(init_mssg, thread_ID);
+	strcat(init_mssg, "\n");
+	
+	printf("%s\n", init_mssg);
     if((net_socket = socket(AF_INET, SOCK_STREAM, 0)) == -1){
         perror("Socket Failed");
         exit(EXIT_FAILURE);
@@ -124,37 +103,31 @@ void *run_client(void *arguments){
         exit(EXIT_FAILURE);
     }
     
-    // Receiving welcome message
-    /*recv(net_socket, received, sizeof(received),0);
-    printf("%s", received);
-    memset(received, 0, sizeof(received));
-    */
     
-    if(fp == NULL)
-    {
+    if(fp == NULL){
 		printf("File Open Error\n");
         exit(EXIT_FAILURE);
     }
-    fgets(word,15,fp);
+	
     
-   /* if(send(net_socket,word,strlen(word),0) < 0)
-    {
-        printf("Error: send() failed\n");
-        exit(EXIT_FAILURE);
-    }*/
-    
-    // Input message
-    /*printf("%s: ", username);
-    memset(to_send, 0, sizeof(to_send));
-    fgets(to_send, MAX, stdin);
-    printf("\n");*/
-    
-    //Sending message to server
+	//Using lock to let only one message go to server at a time 
+    pthread_mutex_lock(&message_lock);
     if(send(net_socket, init_mssg, strlen(init_mssg), 0) < 0) {
         printf("Error: send() failed\n");
         exit(EXIT_FAILURE);
     }
-    
+    pthread_mutex_unlock(&message_lock);
+	
+	
+	//Reading from file and sending to server
+    while(fgets(word,15,fp) != NULL){
+		if(send(net_socket, word, strlen(init_mssg), 0) < 0) {
+			printf("Error: send() failed\n");
+			exit(EXIT_FAILURE);
+		}
+	}
+	
+	
     // Receive reply and terminate
     if(recv(net_socket, received, sizeof(received), 0) < 0) {
         printf("Error: recv() failed\n");
