@@ -20,6 +20,7 @@ int main(int argc, char **argv) {
 
 void create_threads(const char * ip_addr){
 	
+	//Define ID for each thread
 	struct arg_struct arguments[3];
 		arguments[0].arg2 = 1;
 		arguments[1].arg2 = 2;
@@ -30,7 +31,7 @@ void create_threads(const char * ip_addr){
     pthread_attr_t attr;
     pthread_attr_init(&attr);
     
-    //Creating three writer threads
+    //Creating three client threads
     int i;
     for(i = 0; i < 3; i++){
 		
@@ -54,35 +55,18 @@ void delete_thread(pthread_t threadArray[3]) {
 
 
 
-
-void delay(int number_of_seconds){
-    // Converting time into milli_seconds
-    int milli_seconds = 1000 * number_of_seconds;
-    
-    // Stroing start time
-    clock_t start_time = clock();
-    
-    // looping till required time is not acheived
-    while (clock() < start_time + milli_seconds);
-}
-
-
 //Takes IP address and ID of writer thread
 void *run_client(void *arguments){
-    char received[MAX], to_send[MAX];
-    int net_socket, conn_stat, valread;
+    int net_socket;
     struct sockaddr_in server_address;
-    socklen_t  address_size;
-    char word[15];
-
-	
 	struct arg_struct *args = arguments;
 	const char *ip_addr = args->arg1;
-
-	// printf("%d\n", args->arg2); 
+    char received[MAX], word[15];
+    socklen_t  address_size;
+ 
 
     //Creating the writer message - "Writer thread#" - To be sent to server
-  	char init_mssg[100] = "Writer #";	
+  	char init_mssg[100] = "Connected to Writer #";	
 	char thread_ID[20];
 	sprintf(thread_ID, "%d", args->arg2);
 	strcat(init_mssg, thread_ID);
@@ -107,19 +91,17 @@ void *run_client(void *arguments){
         exit(EXIT_FAILURE);
     }
 
+	//Checking for file error
     if(fp == NULL) {
 		printf("File Open Error\n");
         exit(EXIT_FAILURE);
     }
 	
-    
-	//Using lock to let only one message go to server at a time 
-    // pthread_mutex_lock(&message_lock);strlen
-    // if(send(net_socket, init_mssg, strlen(init_mssg), 0) < 0) {
-    //     printf("Error: send() failed\n");
-    //     exit(EXIT_FAILURE);
-    // }
-    // pthread_mutex_unlock(&message_lock);
+	//Sends initial message to server
+    if(send(net_socket, init_mssg, strlen(init_mssg), 0) < 0) {
+        printf("Error: send() failed\n");
+        exit(EXIT_FAILURE);
+     }
 	
 	
 	//Reading from file and sending to server

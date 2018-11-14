@@ -22,7 +22,6 @@ struct arg_struct{
 FILE *fp;
 pthread_mutex_t message_lock;
 
-void delay();
 void *run_client(void * arguments);
 void create_threads(const char * ip_addr);
 void delete_thread(pthread_t threadArray[3]);
