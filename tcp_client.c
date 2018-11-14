@@ -9,8 +9,11 @@ int main(int argc, char **argv) {
     char * ip_addr = argv[1];
     
 	//Global FP
-	
+	fp = fopen("input.txt", "r");
+
 	create_threads(ip_addr);
+        
+    fclose(fp);
 
 	return 0;
 }
@@ -38,6 +41,7 @@ void create_threads(const char * ip_addr){
             exit(EXIT_FAILURE);
         }
 	}
+    
     delete_thread(threadArray);
 }
 
@@ -102,8 +106,6 @@ void *run_client(void *arguments){
         printf("ERRNO %s\n",strerror(errno));
         exit(EXIT_FAILURE);
     }
-    
-    FILE *fp = fopen("input.txt", "r");
 
     if(fp == NULL) {
 		printf("File Open Error\n");
@@ -121,9 +123,10 @@ void *run_client(void *arguments){
 	
 	
 	//Reading from file and sending to server
-    fgets(word,15,fp);
+    fgets(word, 13, fp);
+	strcat(word, "\\");
 	strcat(word, thread_ID);
-	// strcat(word, "\n");
+	strcat(word, "\0");
 
     // Send message
     if(send(net_socket, word, sizeof(word), 0) < 0) {
@@ -141,9 +144,8 @@ void *run_client(void *arguments){
     if (close(net_socket) < 0) {
         perror("close");
         exit(EXIT_FAILURE);
-    }    
+    }
 
-    fclose(fp);
     pthread_exit(NULL);
     
 }
