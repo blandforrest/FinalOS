@@ -9,17 +9,23 @@
 #include <sys/ipc.h>
 #include <sys/shm.h>
 
+
 #define SHMKEY ((key_t) 6164)
 #define MAX 15
 #define PORT_NUM 2008
+
 
 //Shared Memory
 typedef struct{
     char shared_buffer[MAX];
 } shared_memory;
 
+
 void create_server();
 void *messager(void *in_arg);
+void delete_thread(pthread_t threadArray[3]);
+
 
 shared_memory *shared_mem_ptr;
-pthread_mutex_t lock;
+pthread_mutex_t lock, thread_lock;
+int thread_count = 3;
