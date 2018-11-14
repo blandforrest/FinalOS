@@ -73,7 +73,6 @@ void *run_client(void *arguments){
 	strcat(init_mssg, "\n");
 
 	
-	// printf("%s\n", init_mssg);
     if((net_socket = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
         perror("Socket Failed");
         exit(EXIT_FAILURE);
