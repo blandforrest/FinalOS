@@ -87,21 +87,8 @@ void create_server(){
             
         }
 	}
-    
-	
     // Wait until threads are done - then join and close server
-	while(1){
-		if(thread_count == 0){
-			delete_thread(threadArray);
-	
-			if (close(server_fd) < 0) {
-				perror("close");
-				exit(EXIT_FAILURE);
-			}
-			break;
-		}
-		sleep(1);
-	}
+	delete_thread(threadArray);
 }
 
 
@@ -144,9 +131,6 @@ void *messager(void *in_arg){
     
     //Send message once reading is complete
     send(new_socket, shared_mem_ptr->shared_buffer, sizeof(shared_mem_ptr->shared_buffer), 0); 
-	
-	//Thread is done - decrease thread count
-	thread_count--;
 	
     pthread_mutex_unlock(&lock);
 

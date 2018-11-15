@@ -28,4 +28,3 @@ void delete_thread(pthread_t threadArray[3]);
 
 shared_memory *shared_mem_ptr;
 pthread_mutex_t lock, thread_lock;
-int thread_count = 3;
