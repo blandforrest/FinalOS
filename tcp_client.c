@@ -61,7 +61,7 @@ void *run_client(void *arguments){
     struct sockaddr_in server_address;
 	struct arg_struct *args = arguments;
 	const char *ip_addr = args->arg1;
-    char received[MAX], word[15];
+    char received[MAX], word[MAX];
     socklen_t  address_size;
  
 
@@ -104,7 +104,7 @@ void *run_client(void *arguments){
 	
 	
 	//Reading from file and sending to server
-    fgets(word, 13, fp);
+    fgets(word, MAX - 2, fp);
 	strcat(word, "\\");
 	strcat(word, thread_ID);
 	strcat(word, "\0");
