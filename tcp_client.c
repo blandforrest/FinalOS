@@ -72,7 +72,6 @@ void *run_client(void *arguments){
 	strcat(init_mssg, thread_ID);
 	strcat(init_mssg, "\n");
 
-	
     if((net_socket = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
         perror("Socket Failed");
         exit(EXIT_FAILURE);
@@ -97,11 +96,10 @@ void *run_client(void *arguments){
     }
 	
 	//Sends initial message to server
-    if(send(net_socket, init_mssg, strlen(init_mssg), 0) < 0) {
-        printf("Error: send() failed\n");
+    if(send(net_socket, init_mssg, sizeof(init_mssg), 0) < 0) {
+        perror("send");
         exit(EXIT_FAILURE);
-     }
-	
+    }
 	
 	//Reading from file and sending to server
     fgets(word, MAX - 2, fp);
@@ -109,6 +107,7 @@ void *run_client(void *arguments){
 	strcat(word, thread_ID);
 	strcat(word, "\0");
 
+    printf("Sending: %s\n", word);
     // Send message
     if(send(net_socket, word, sizeof(word), 0) < 0) {
         perror("send");
@@ -120,7 +119,7 @@ void *run_client(void *arguments){
         perror("recv");
         exit(EXIT_FAILURE);
     }
-    printf("%s\n", received);
+    printf("Received: %s\n", received);
 
     if (close(net_socket) < 0) {
         perror("close");
