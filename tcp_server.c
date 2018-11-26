@@ -21,7 +21,6 @@ int main(){
     create_server();
  
     // detach shared memory
-    shmctl(shmid, IPC_RMID, NULL);
     if(shmdt(shared_mem_ptr) == -1){
 		perror("shmdt");
 		exit(-1);
@@ -89,6 +88,12 @@ void create_server(){
 	}
     // Wait until threads are done - then join and close server
 	delete_thread(threadArray);
+
+    if (close(server_fd) < 0)
+    {
+        perror("close");
+        exit(EXIT_FAILURE);
+    }
 }
 
 
@@ -107,20 +112,18 @@ void *messager(void *in_arg){
     int new_socket = (intptr_t) in_arg;
     char buffer[MAX], init_message[100];
     
-	//Recieving and printing init_message from writers
+	// Recieving and printing init_message from writers
 	if (recv(new_socket, init_message, sizeof(init_message),0) <= 0){ 
 		perror("recv");
         exit(EXIT_FAILURE);
     }
-	printf("%s\n", init_message);
-	
+	printf("%s", init_message);
 	
 	//Recieving file data from server 
     if (recv(new_socket, buffer, MAX,0) <= 0){ 
         perror("recv");
         exit(EXIT_FAILURE);
     }
-
 	pthread_mutex_lock(&lock);
 	
 	//Copy buffer to shared memory and printf
